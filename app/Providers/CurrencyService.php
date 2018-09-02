@@ -23,6 +23,6 @@ class CurrencyService extends ServiceProvider
      */
     public function register()
     {
-        //
+        
     }
 }

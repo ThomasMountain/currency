@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Rate;
 use Illuminate\Http\Request;
 
 class CurrencyController extends Controller
 {
     public function index(){
 
-        return view('dashboard');
+        $rates = Rate::all();
+
+        return view('dashboard', compact('rates'));
     }
 }
