@@ -38,7 +38,7 @@ class PopulateRateData extends Command {
         //Use the API to get JSON data
         $prevDate = now()->subDays(7);
         $base     = 'https://free.currencyconverterapi.com/api/v6/convert';
-        $query    = '?q=GBP_EUR&compact=ultra&date=' . $prevDate->format("Y-m-d") . '&endDate=' . now()->format("Y-m-d") . "&apiKey=c825e53b0f1820acae65";
+        $query    = '?q=GBP_EUR&compact=ultra&date=' . $prevDate->format("Y-m-d") . '&endDate=' . now()->format("Y-m-d") . "&apiKey=" . config('services.currency_api.key');
 
         $dates = json_decode(file_get_contents($base . $query));
 
