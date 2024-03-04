@@ -30,6 +30,6 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
     'currency_api' => [
-        'key' => env('CURRENCY_API_KEY')
-    ]
+        'key' => env('CURRENCY_API_KEY'),
+    ],
 ];
