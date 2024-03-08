@@ -69,6 +69,5 @@ class PopulateRateData extends Command
                 }
             }
         }
-
     }
 }
