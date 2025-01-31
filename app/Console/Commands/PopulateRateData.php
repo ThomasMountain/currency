@@ -2,9 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Rate;
+use App\Services\CurrencyRateService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 
 class PopulateRateData extends Command
 {
@@ -22,52 +21,24 @@ class PopulateRateData extends Command
      */
     protected $description = 'Populates the rate data for previous dates';
 
-    /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    private CurrencyRateService $currencyRateService;
+
+    public function __construct(CurrencyRateService $currencyRateService)
     {
         parent::__construct();
+        $this->currencyRateService = $currencyRateService;
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
-        $prevDate = now()->subDays(7);
-        $base = 'https://free.currencyconverterapi.com/api/v6/convert';
+        foreach (['GBP_EUR', 'EUR_GBP'] as $currencyPair) {
 
-        $currencies = [
-            'GBP_EUR',
-            'EUR_GBP',
-        ];
+            $data = $this->currencyRateService->getRateForDate($currencyPair, now());
 
-        foreach ($currencies as $currency) {
-            $arguments = [
-                'q' => $currency,
-                'compact' => 'ultra',
-                'date' => $prevDate->format('Y-m-d'),
-                'endDate' => now()->format('Y-m-d'),
-                'apiKey' => config('services.currency_api.key')
-            ];
+            $this->currencyRateService->storeRate($currencyPair, $data);
+            $this->info('Rate data populated successfully.');
 
-            $response = Http::get($base, $arguments);
-
-            $dates = $response->json();
-            foreach ($dates[$currency] as $date => $rate) {
-                if (! Rate::where('rate_date', $date)->exists()) {
-                    Rate::create([
-                        'conversion' => $currency,
-                        'rate_date' => $date,
-                        'rate' => $rate,
-                    ]);
-                }
-            }
+            return Command::SUCCESS;
         }
     }
 }

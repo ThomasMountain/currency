@@ -14,4 +14,4 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', [CurrencyController::class, 'index']);
+Route::get('/', [CurrencyController::class, 'index'])->name('home');
