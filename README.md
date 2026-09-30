@@ -1,64 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# Currency Rates
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A small Laravel app that tracks the GBP/EUR and EUR/GBP exchange rates over
+time and plots them as a line chart.
 
-## About Laravel
+Rate data comes from [Frankfurter](https://www.frankfurter.app), a free API
+serving European Central Bank reference rates. It needs **no API key** and no
+account, which keeps this project runnable from a fresh clone.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## How it works
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```
+app/Console/Commands/PopulateRateData.php   get:rates — backfills both pairs
+app/Services/CurrencyRateService.php        fetches a date range, stores new rows
+app/Http/Controllers/CurrencyController.php groups rows into one series per pair
+resources/views/dashboard.blade.php         Chart.js, one dataset per pair
+bootstrap/app.php                           routes + the daily schedule
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+`get:rates` fetches a whole date range in a **single** HTTP request per pair
+rather than one request per day, then inserts only the dates it does not
+already have. That makes it cheap to run repeatedly and safe to schedule.
 
-## Learning Laravel
+Two details worth knowing, because both are easy to get wrong:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **The response is keyed by the date the rate was actually published.** The
+  ECB does not publish at weekends or on holidays, so those dates are simply
+  absent and the series has natural gaps. Requesting a Saturday returns the
+  preceding Friday's rate.
+- **A 4xx response is not retried.** It means there is no data for the
+  requested window, whereas a 5xx or a dropped connection is transient and is
+  retried. Failures return an empty set and are logged rather than thrown, so
+  one bad response cannot abort the other pair.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Requirements
 
-## Laravel Sponsors
+- PHP 8.3+
+- Composer
+- Node (only if you want to rebuild the front-end assets)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+## Setup
 
-### Premium Partners
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[CMS Max](https://www.cmsmax.com/)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
+Point the database at whatever you like in `.env`. The default configuration
+expects the bundled [Laravel Sail](https://laravel.com/docs/sail) MySQL
+container:
 
-## Contributing
+```bash
+docker compose up -d
+php artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Prefer SQLite? Then set `DB_CONNECTION=sqlite` and create an empty file at
+`database/database.sqlite`.
 
-## Code of Conduct
+## Populating data
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The chart is only as fresh as the last run, so populate it once to begin with:
 
-## Security Vulnerabilities
+```bash
+php artisan get:rates              # backfills the last 30 days (default)
+php artisan get:rates --days=90   # or a longer window
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Each scheduled run fetches only the default 30-day window, so it stays fast no
+matter how far back the data goes — it tops the window up rather than starting
+over. Business days only, so expect roughly 21 rows per pair for a 30-day
+window.
 
-## License
+## Keeping it fresh
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+`get:rates` is scheduled to run daily at 06:00 in `bootstrap/app.php`, with
+`withoutOverlapping()` so concurrent runs cannot race. Run Laravel's scheduler
+to make that happen:
+
+```bash
+php artisan schedule:work     # for local development
+```
+
+In production, add the usual cron entry:
+
+```
+* * * * * cd /path/to/currency && php artisan schedule:run >> /dev/null 2>&1
+```
+
+## Tests
+
+The suite runs against an in-memory SQLite database, so it needs no setup and
+no running database:
+
+```bash
+composer test
+```
+
+Static analysis and code style:
+
+```bash
+./vendor/bin/phpstan analyse    # level 5
+./vendor/bin/pint --test
+```
+
+## Notes
+
+- The `rate` column is a `float`. That is ample for exchange rates in this
+  range; switch to `decimal` if you ever need exact arithmetic.
+- Rows are soft deleted, and a soft-deleted row still counts as "already
+  recorded" when backfilling, so re-running the command will not resurrect or
+  duplicate it.
+- Chart.js is loaded from a CDN with an SRI hash, so the page depends on that
+  host being reachable. The line bundles it locally if you would rather not.
+
+## Licence
+
+MIT.

@@ -3,15 +3,13 @@ includes:
     - vendor/nesbot/carbon/extension.neon
 
 parameters:
-
     paths:
         - app/
 
     # Level 10 is the highest level
     level: 5
 
-#    ignoreErrors:
-#        - '#PHPDoc tag @var#'
-#
-#    excludePaths:
-#        - ./*/*/FileToBeExcluded.php
+    # Read casts from the casts() method body rather than its declared return
+    # type, so the idiomatic Laravel 11+ style is understood. Without this,
+    # $rate->rate_date is inferred as string instead of Carbon.
+    parseModelCastsMethod: true

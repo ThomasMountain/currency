@@ -66,7 +66,16 @@ class CurrencyRateService
         $stored = 0;
 
         foreach ($rates as $date => $rate) {
-            $exists = Rate::where('conversion', $pair)->where('rate_date', $date)->exists();
+            // whereDate rather than an exact match: rate_date is cast to a
+            // date, so it is stored with a time component. An exact string
+            // comparison would miss those rows and re-insert duplicates.
+            // withTrashed() matters too, because a soft-deleted row still
+            // occupies this (conversion, rate_date) pair and the global
+            // scope would otherwise hide it.
+            $exists = Rate::withTrashed()
+                ->where('conversion', $pair)
+                ->whereDate('rate_date', $date)
+                ->exists();
 
             if ($exists) {
                 continue;
