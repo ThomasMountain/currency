@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@source '../../resources/views';
+@source '../../app';
+
+@theme {
+    --font-sans: 'Inter var', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/*
+ * Tailwind injects a red border on invalid form controls in some browsers.
+ * This app has no client-side validated forms, so remove it.
+ *
+ * See: https://github.com/laravel-frontend-presets/tall/issues/7
+ */
+input:invalid,
+textarea:invalid,
+select:invalid {
+    box-shadow: none;
+}

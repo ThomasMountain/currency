@@ -16,12 +16,8 @@
     <!-- Fonts -->
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="{{ url(mix('css/app.css')) }}">
-
-    <!-- Scripts -->
-    <script src="{{ url(mix('js/app.js')) }}" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js" integrity="sha256-bC3LCZCwKeehY6T4fFi9VfOU0gztUa+S4cnkIhVPZ5E=" crossorigin="anonymous"></script>
+    <!-- Styles and scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">

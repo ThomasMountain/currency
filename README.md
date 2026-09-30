@@ -36,7 +36,7 @@ Two details worth knowing, because both are easy to get wrong:
 
 - PHP 8.3+
 - Composer
-- Node (only if you want to rebuild the front-end assets)
+- Node 20+ (only to build the front-end assets)
 
 ## Setup
 
@@ -44,7 +44,14 @@ Two details worth knowing, because both are easy to get wrong:
 composer install
 cp .env.example .env
 php artisan key:generate
+npm install
+npm run build
 ```
+
+The last two commands compile the CSS and JavaScript with Vite into
+`public/build`, which is gitignored. Without them the dashboard will render
+un-styled and the chart will not draw. During development, `npm run dev` starts
+Vite with hot reloading instead.
 
 Point the database at whatever you like in `.env`. The default configuration
 expects the bundled [Laravel Sail](https://laravel.com/docs/sail) MySQL
@@ -111,8 +118,8 @@ Static analysis and code style:
 - Rows are soft deleted, and a soft-deleted row still counts as "already
   recorded" when backfilling, so re-running the command will not resurrect or
   duplicate it.
-- Chart.js is loaded from a CDN with an SRI hash, so the page depends on that
-  host being reachable. The line bundles it locally if you would rather not.
+- Chart.js is bundled into the JavaScript at build time, so the page has no
+  external runtime dependency and works offline.
 
 ## Licence
 
